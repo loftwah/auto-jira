@@ -50,7 +50,7 @@ def fake_get_completion_api_error(messages, max_retries=3):
 
 @pytest.fixture
 def generator():
-    return TicketGenerator(api_key="dummy", model="gpt-4o", api_base="https://api.openai.com/v1/")
+    return TicketGenerator(api_key="test_key", model="gpt-4o", api_base="https://api.openai.com/v1/")
 
 def test_generate_tickets_valid(generator, monkeypatch):
     # Create a proper mock function that handles self correctly
