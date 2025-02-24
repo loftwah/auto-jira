@@ -1,0 +1,102 @@
+# .cursorrules for AI-Powered Jira Ticket Generator
+# Author: Dean Lofts
+# Date: 24 February 2025
+
+# Code Style & Conventions
+code_style:
+  - follow: PEP8 # Enforce PEP 8 style guide
+  - naming_conventions:
+      functions: snake_case # Function names in snake_case
+      classes: PascalCase # Class names in PascalCase
+  - line_length: 88 # Maximum line length of 88 characters
+
+# Error Handling
+error_handling:
+  - api_calls: always use try-except # Wrap API calls in try-except blocks
+  - file_operations: handle FileNotFoundError, PermissionError # Handle common file-related errors
+
+# Security
+security:
+  - api_keys: use environment variables or .env files # Securely manage API keys
+  - avoid: hardcoding sensitive information # Prevent hardcoding of credentials
+
+# Modularity
+modularity:
+  - function_length: max 50 lines # Encourage shorter functions
+  - suggest: breaking down large functions # Promote modular code
+
+# Documentation
+documentation:
+  - docstrings: required for all functions and classes # Enforce docstrings
+  - comments: encourage for complex logic # Suggest comments for clarity
+
+# Testing
+testing:
+  - suggest: unit tests for critical functions # Encourage testing of key functions
+  - assertions: use for input validation # Use assertions to validate inputs
+
+# Performance
+performance:
+  - prefer: list comprehensions over loops # Favor efficient list comprehensions
+  - avoid: unnecessary API calls # Minimize redundant API usage
+
+# User Interaction
+user_interaction:
+  - validate: all user inputs # Ensure inputs are validated
+  - provide: clear prompts and error messages # Guide users with clear messages
+
+# Libraries & Tools
+libraries:
+  - html_parsing: use beautifulsoup4 # Use BeautifulSoup for HTML parsing
+  - markdown_parsing: use mistune # Use Mistune for Markdown parsing
+  - api_integration: use openai library # Use OpenAI's official library for API calls
+
+# Ticket Structure
+ticket_structure:
+  - use: dataclass or typed dictionary # Suggest using dataclasses or TypedDict for tickets
+  - fields: title, description, dependencies, risks, pr_details # Enforce required ticket fields
+
+# API Usage
+api_usage:
+  - handle: rate limits with exponential backoff # Implement backoff for rate limits
+  - log: API errors for debugging # Log errors for easier debugging
+
+# CLI Configuration
+cli:
+  - argument_parsing: use argparse # Use argparse for CLI argument handling
+  - flags:
+      - file: optional, for input file # --file <filename>
+      - non_interactive: boolean flag # --non-interactive
+      - model: string, default 'gpt-4o' # --model <model-name>
+      - api_url: string, default 'https://api.openai.com/v1/' # --api-url <url>
+      - api_key: string, optional # --api-key <key>
+      - output_format: string, default 'markdown' # --output-format <format>
+
+# Operational Modes
+modes:
+  - interactive:
+      - prompt user for input if no file # Ask for requirements if no file is provided
+      - display tickets and ask for feedback # Show tickets and request feedback
+      - loop until satisfied # Iterate until the user is happy with the output
+  - non_interactive:
+      - read from file or stdin # Accept input from file or piped input
+      - generate tickets once and exit # Produce output without further interaction
+
+# Output Configuration
+output:
+  - format:
+      - markdown: use clear headings and sections # Structured Markdown output
+      - json: use predefined schema # Structured JSON output
+  - piping: support output to file via redirection # Allow piping to files (e.g., > tickets.md)
+
+# Available Libraries
+available_libraries:
+  - openai # OpenAI API integration
+  - mistune # Markdown parsing
+  - beautifulsoup4 # HTML parsing
+  - lxml # Parser for BeautifulSoup
+  - python-dotenv # Environment variable management
+
+# Typing
+typing:
+  - use: type hints for function signatures and variables # Enforce type hints for clarity and safety
