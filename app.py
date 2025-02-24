@@ -7,7 +7,7 @@ A CLI tool that leverages OpenAI to transform requirements into detailed Jira ti
 import argparse
 import sys
 from pathlib import Path
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 import os
 from dotenv import load_dotenv
 from ticket_generator import TicketGenerator
