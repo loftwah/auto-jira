@@ -230,7 +230,7 @@ Examples:
             interactive=not args.non_interactive
         )
         
-        # Format output based on selected format
+        # Format and display final output
         if args.output_format == 'json':
             print(json.dumps(tickets, indent=2))
         else:

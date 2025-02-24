@@ -210,33 +210,38 @@ Requirements:
                         all_issues.append(f"Ticket {i} issues:\n" +
                                           "\n".join(f"- {issue}" for issue in issues))
                 
+                # Display the generated tickets first
+                print("\nGenerated Tickets:")
+                for i, ticket in enumerate(tickets, 1):
+                    print(f"\nTicket {i}:")
+                    print(f"Title: {ticket.get('title', '')}")
+                    print(f"Description (first 200 chars): {ticket.get('description', '')[:200]}...")
+
                 if all_issues:
-                    # For non-interactive mode, retry automatically up to max attempts
-                    if not interactive:
-                        if attempts < non_interactive_max_attempts:
-                            logger.warning("Attempt {}/{}: Generated tickets did not meet quality requirements:\n{}\nRetrying...".format(
-                                attempts, non_interactive_max_attempts, "\n".join(all_issues)))
-                            continue  # Retry ticket generation
-                        else:
-                            logger.warning("Maximum non-interactive attempts reached. Returning tickets with issues:\n{}".format("\n".join(all_issues)))
-                            return tickets
-                    else:
-                        # Interactive mode: display tickets, issues and ask for user feedback.
-                        print("\nGenerated Tickets:")
-                        for i, ticket in enumerate(tickets, 1):
-                            print(f"\nTicket {i}:")
-                            print(f"Title: {ticket.get('title', '')}")
-                            print(f"Description (first 200 chars): {ticket.get('description', '')[:200]}...")
-                        print("\nIssues detected:")
-                        print("\n".join(all_issues))
-                        feedback = input("\nAre you satisfied with these tickets? (y/n): ").lower()
-                        if feedback == 'y':
-                            return tickets
-                        else:
-                            continue  # Regenerate tickets in interactive mode
-                else:
-                    # All tickets passed validation
+                    print("\nIssues detected:")
+                    print("\n".join(all_issues))
+                
+                if not interactive:
+                    if attempts < non_interactive_max_attempts and all_issues:
+                        logger.warning("Attempt {}/{}: Generated tickets did not meet quality requirements:\n{}\nRetrying...".format(
+                            attempts, non_interactive_max_attempts, "\n".join(all_issues)))
+                        continue
                     return tickets
+                
+                # Interactive mode: ask for feedback
+                feedback = input("\nAre you satisfied with these tickets? (y/n): ").lower()
+                if feedback == 'y':
+                    return tickets
+                else:
+                    # Get specific feedback from the user
+                    user_feedback = input("\nPlease describe what you'd like to improve: ")
+                    # Add the feedback to messages for context in the next generation
+                    messages.extend([
+                        {"role": "assistant", "content": json.dumps(response)},
+                        {"role": "user", "content": f"Please regenerate the tickets with these improvements: {user_feedback}"}
+                    ])
+                    continue
+                
             except Exception as e:
                 logger.error(f"generate_tickets: Exception encountered: {e}")
                 raise e 
