@@ -33,24 +33,22 @@ def fake_get_completion_invalid(messages, max_retries=3):
     }
 
 def fake_get_completion_rate_limit(messages, max_retries=3):
-    from openai.types import APIResponse
-    response = APIResponse(
-        response=Mock(status_code=429),
-        body={"error": {"message": "Rate limit exceeded"}}
-    )
-    raise RateLimitError(response=response, body=response.body)
+    from openai.types import APIError
+    error_response = {
+        "status_code": 429,
+        "message": "Rate limit exceeded",
+        "request_id": "fake_request_id"
+    }
+    raise RateLimitError(message="Rate limit exceeded", body=error_response, response=error_response)
 
 def fake_get_completion_api_error(messages, max_retries=3):
-    from openai import APIError
-    from openai._base_client import HttpxRequest
-    request = HttpxRequest(
-        method="post",
-        url="https://api.openai.com/v1/chat/completions",
-        params={},
-        headers={},
-        json={}
-    )
-    raise APIError("API error occurred", request=request)
+    from openai.types import APIError
+    error_response = {
+        "status_code": 500,
+        "message": "API error occurred",
+        "request_id": "fake_request_id"
+    }
+    raise APIError(message="API error occurred", body=error_response, response=error_response)
 
 @pytest.fixture
 def generator():
