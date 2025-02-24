@@ -144,7 +144,16 @@ Requirements:
         requirements: str,
         interactive: bool = True
     ) -> List[Dict]:
-        """Generate tickets without arbitrary validation."""
+        """
+        Generate tickets with optional interactive refinement.
+        
+        Args:
+            requirements: Project requirements text
+            interactive: Whether to enable interactive refinement mode
+        
+        Returns:
+            List of ticket dictionaries
+        """
         messages = [
             {"role": "system", "content": self._create_system_prompt()},
             {"role": "user", "content": self._create_user_prompt(requirements)}
@@ -152,8 +161,30 @@ Requirements:
         logger.debug(f"generate_tickets: Initial messages: {messages}")
 
         try:
-            response = self._get_completion(messages)
-            return response.get("tickets", [])
+            while True:
+                response = self._get_completion(messages)
+                tickets = response.get("tickets", [])
+                
+                if not interactive:
+                    return tickets
+                
+                # In interactive mode, ask for feedback
+                print("\nGenerated tickets. Are you satisfied with this output? (y/n)")
+                user_response = input().strip().lower()
+                
+                if user_response == 'y':
+                    return tickets
+                
+                print("\nPlease provide feedback for improvement:")
+                feedback = input().strip()
+                
+                # Add the feedback to messages for context
+                messages.extend([
+                    {"role": "assistant", "content": json.dumps(response)},
+                    {"role": "user", "content": f"Please refine these tickets based on the following feedback: {feedback}"}
+                ])
+                logger.debug(f"generate_tickets: Added feedback, new messages: {messages}")
+                
         except Exception as e:
             logger.error(f"generate_tickets: Exception encountered: {str(e)}")
             raise e 
