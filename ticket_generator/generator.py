@@ -44,49 +44,50 @@ class TicketGenerator:
 
     def _create_system_prompt(self) -> str:
         """Create an enhanced system prompt for ticket generation."""
-        return """You are an expert project manager and developer tasked with creating highly detailed Jira tickets.
-        Your goal is to produce exhaustive, verbose, and pedantic tickets that leave no detail unaddressed.
+        return """You are an expert project manager and developer tasked with creating highly detailed Jira tickets for a CLI tool that transforms project requirements into actionable tasks. The application consists of multiple components including input parsing (for HTML, Markdown, and plain text), AI-powered ticket generation using OpenAI's API, a command-line interface supporting interactive and non-interactive modes, secure API key management, and comprehensive testing and CI/CD integration.
         
-        For each ticket, you MUST include:
-        1. Title: Clear, concise summary (max 100 characters)
-        2. Description: Detailed explanation (minimum 200 words) covering:
-           - Purpose and business value
-           - Technical implementation details
-           - Step-by-step implementation guide
-           - Testing requirements
-        3. Dependencies: Comprehensive list of prerequisite tickets
-        4. Risk Analysis: Provide a detailed analysis of potential risks including:
-           - Impact assessment
-           - Probability evaluation
-           - Mitigation strategies
-        5. PR Details:
-           - Specific files to modify
-           - Detailed code changes expected
-           - Testing approach
-        
-        Be exhaustive and leave no detail unaddressed. Format as JSON with the structure:
+For each ticket, you MUST include:
+1. Title: A short, clear summary (max 100 characters).
+2. Description: A detailed explanation (minimum 200 words) covering the purpose, technical implementation details, step-by-step instructions, and testing requirements.
+3. Dependencies: A list of prerequisite tasks or tickets.
+4. Risk Analysis: Detailed potential risks, their impact, likelihood, and mitigation strategies.
+5. PR Details: Specific files to modify, expected code changes, and the testing approach.
+
+Break down the overall requirements into separate, actionable tickets covering at least these areas:
+- Input Parsing Module: Handling different formats (HTML, Markdown, plain text) and error handling.
+- Ticket Generation Engine: Integrating with OpenAI's API and formatting tickets.
+- CLI Interface: Parsing command-line arguments, interactive prompts, and mode handling.
+- API Key Management: Securing and managing API keys via CLI, environment variables, or .env files.
+- Testing and CI/CD Setup: Comprehensive unit, integration, and end-to-end tests along with pipeline integration.
+
+Format your output as JSON with the following structure:
+{
+    "tickets": [
         {
-            "tickets": [
-                {
-                    "title": "string",
-                    "description": "string",
-                    "dependencies": ["string"],
-                    "risk_analysis": "string",
-                    "pr_details": {
-                        "files": ["string"],
-                        "changes": "string"
-                    }
-                }
-            ]
-        }"""
+            "title": "string",
+            "description": "string",
+            "dependencies": ["string"],
+            "risk_analysis": "string",
+            "pr_details": {
+                "files": ["string"],
+                "changes": "string"
+            }
+        },
+        ...
+    ]
+}"""
 
     def _create_user_prompt(self, requirements: str) -> str:
         """Create the user prompt for ticket generation."""
-        return f"""Please analyze these requirements and create detailed Jira tickets:
+        return f"""Please analyze the following project requirements and break them down into detailed, actionable Jira tickets. Ensure that you create separate tickets for each major functional area such as Input Parsing, Ticket Generation Engine, CLI Interface, API Key Management, and Testing/CI/CD integration. Each ticket should include:
+- A concise title.
+- A detailed description covering purpose, implementation details, step-by-step instructions, and testing.
+- Any dependencies on other tasks.
+- A risk analysis detailing potential challenges and mitigation strategies.
+- PR details listing specific files and code changes needed.
 
-{requirements}
-
-Break this down into specific, actionable tickets. Be thorough and consider all implementation details."""
+Requirements:
+{requirements}"""
 
     def _validate_ticket(self, ticket: Dict) -> List[str]:
         """Validate a ticket meets requirements."""
