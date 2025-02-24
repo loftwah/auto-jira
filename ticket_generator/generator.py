@@ -13,7 +13,6 @@ from openai import APIError, RateLimitError
 class TicketValidation:
     """Validation rules for generated tickets."""
     min_description_length: int = 200
-    min_risks: int = 3
     required_fields: set = frozenset({
         'title', 'description', 'dependencies', 'risk_analysis', 'pr_details'
     })
@@ -53,10 +52,10 @@ class TicketGenerator:
            - Step-by-step implementation guide
            - Testing requirements
         3. Dependencies: Comprehensive list of prerequisite tickets
-        4. Risk Analysis: At least 3 potential risks, each with:
+        4. Risk Analysis: Provide a detailed analysis of potential risks including:
            - Impact assessment
-           - Probability
-           - Mitigation strategy
+           - Probability evaluation
+           - Mitigation strategies
         5. PR Details:
            - Specific files to modify
            - Detailed code changes expected
@@ -99,11 +98,6 @@ Break this down into specific, actionable tickets. Be thorough and consider all 
         # Check description length
         if len(ticket.get('description', '')) < validation.min_description_length:
             issues.append(f"Description too short (minimum {validation.min_description_length} characters)")
-        
-        # Check risk analysis
-        risks = ticket.get('risk_analysis', '').count('\n')  # Rough estimate of risk count
-        if risks < validation.min_risks:
-            issues.append(f"Not enough risks identified (minimum {validation.min_risks})")
         
         return issues
 
