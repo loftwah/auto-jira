@@ -61,6 +61,9 @@ def parse_arguments() -> argparse.Namespace:
 
 def format_ticket_markdown(ticket: Dict) -> str:
     """Format a ticket as markdown."""
+    # Precompute joined strings outside the f-string to avoid backslash in expression errors
+    dependencies_str = "- " + "\n- ".join(ticket['dependencies']) if ticket['dependencies'] else "None"
+    pr_files_str = "- " + "\n- ".join(ticket['pr_details']['files'])
     return f"""
 # {ticket['title']}
 
@@ -68,14 +71,14 @@ def format_ticket_markdown(ticket: Dict) -> str:
 {ticket['description']}
 
 ## Dependencies
-{"- " + "\n- ".join(ticket['dependencies']) if ticket['dependencies'] else "None"}
+{dependencies_str}
 
 ## Risk Analysis
 {ticket['risk_analysis']}
 
 ## PR Details
 ### Files to Modify
-{"- " + "\n- ".join(ticket['pr_details']['files'])}
+{pr_files_str}
 
 ### Expected Changes
 {ticket['pr_details']['changes']}
@@ -91,9 +94,10 @@ def parse_input_content(content: str, file_type: str = None) -> str:
             # Extract text from body, or full document if no body
             return soup.body.get_text() if soup.body else soup.get_text()
         elif file_type == '.md':
-            # Convert Markdown to plain text while preserving structure
-            markdown = mistune.create_markdown(renderer=mistune.renderers.TextRenderer())
-            return markdown(content)
+            # Use mistune's default HTML renderer and then strip HTML tags
+            html = mistune.html(content)
+            soup = BeautifulSoup(html, 'lxml')
+            return soup.get_text()
         return content  # Return as-is for plain text
     except Exception as e:
         raise ValueError(f"Error parsing {file_type} content: {str(e)}")

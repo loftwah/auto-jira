@@ -7,7 +7,7 @@ import openai
 import json
 import time
 from dataclasses import dataclass
-from openai.types.error import APIError, RateLimitError
+from openai import APIError, RateLimitError
 
 @dataclass
 class TicketValidation:
@@ -24,7 +24,7 @@ class TicketGenerator:
     def __init__(
         self,
         api_key: str,
-        model: str = "gpt-4o",  # Default to GPT-4o, per requirements
+        model: str = "gpt-4o",  # Updated from gpt-4 to gpt-4o
         api_base: str = "https://api.openai.com/v1/"
     ):
         """
@@ -37,8 +37,8 @@ class TicketGenerator:
         """
         self.client = openai.OpenAI(api_key=api_key, base_url=api_base)
         self.model = model
-        if model != "gpt-4o":
-            print("Warning: Using a model other than 'gpt-4o'. Ensure it is GPT-4o or later for optimal performance.")
+        if not model.startswith("gpt-4o"):  # Updated check for gpt-4o
+            print("Warning: Using a model other than GPT-4o. Ensure it is GPT-4o or later for optimal performance.")
 
     def _create_system_prompt(self) -> str:
         """Create an enhanced system prompt for ticket generation."""
