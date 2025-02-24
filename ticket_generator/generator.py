@@ -111,21 +111,32 @@ Break this down into specific, actionable tickets. Be thorough and consider all 
         """Get completion from OpenAI API with retry logic."""
         for attempt in range(max_retries):
             try:
+                print(f"[DEBUG] _get_completion: Attempt {attempt+1}/{max_retries}")
+                print(f"[DEBUG] _get_completion: Sending messages: {messages}")
                 response = self.client.chat.completions.create(
                     model=self.model,
                     messages=messages,
                     response_format={"type": "json_object"},
                     temperature=0.7
                 )
-                return json.loads(response.choices[0].message.content)
-            except RateLimitError:
+                print(f"[DEBUG] _get_completion: Received raw response: {response}")
+                parsed_response = json.loads(response.choices[0].message.content)
+                print(f"[DEBUG] _get_completion: Parsed response: {parsed_response}")
+                return parsed_response
+            except RateLimitError as e:
+                print(f"[DEBUG] _get_completion: RateLimitError encountered: {e}")
                 if attempt < max_retries - 1:
-                    time.sleep(2 ** attempt)  # Exponential backoff
+                    wait_time = 2 ** attempt
+                    print(f"[DEBUG] _get_completion: Retrying after {wait_time} seconds due to rate limit.")
+                    time.sleep(wait_time)  # Exponential backoff
                     continue
                 raise
             except APIError as e:
+                print(f"[DEBUG] _get_completion: APIError encountered: {e}")
                 if attempt < max_retries - 1 and e.status_code in {500, 502, 503, 504}:
-                    time.sleep(2 ** attempt)
+                    wait_time = 2 ** attempt
+                    print(f"[DEBUG] _get_completion: Retrying after {wait_time} seconds due to server error.")
+                    time.sleep(wait_time)
                     continue
                 raise
 
@@ -139,16 +150,19 @@ Break this down into specific, actionable tickets. Be thorough and consider all 
             {"role": "system", "content": self._create_system_prompt()},
             {"role": "user", "content": self._create_user_prompt(requirements)}
         ]
+        print(f"[DEBUG] generate_tickets: Initial messages: {messages}")
         
         while True:
             try:
                 response = self._get_completion(messages)
+                print(f"[DEBUG] generate_tickets: API response received: {response}")
                 tickets = response.get("tickets", [])
                 
                 # Validate all tickets
                 all_issues = []
                 for i, ticket in enumerate(tickets, 1):
                     issues = self._validate_ticket(ticket)
+                    print(f"[DEBUG] generate_tickets: Validation for ticket {i}: {issues}")
                     if issues:
                         all_issues.append(f"Ticket {i} issues:\n" + "\n".join(f"- {issue}" for issue in issues))
                 
@@ -159,11 +173,11 @@ Break this down into specific, actionable tickets. Be thorough and consider all 
                     return tickets
                 
                 # In interactive mode, display tickets and get feedback
-                print("\nGenerated Tickets:")
+                print("\n[DEBUG] Generated Tickets:")
                 for i, ticket in enumerate(tickets, 1):
                     print(f"\nTicket {i}:")
-                    print(f"Title: {ticket['title']}")
-                    print(f"Description: {ticket['description'][:200]}...")  # Show first 200 chars
+                    print(f"[DEBUG] Title: {ticket['title']}")
+                    print(f"[DEBUG] Description (first 200 chars): {ticket['description'][:200]}...")
                 
                 feedback = input("\nAre you satisfied with these tickets? (y/n): ").lower()
                 if feedback == 'y':
@@ -171,13 +185,15 @@ Break this down into specific, actionable tickets. Be thorough and consider all 
                 
                 # Get feedback for refinement
                 feedback = input("Please provide feedback for improvement: ")
+                print(f"[DEBUG] generate_tickets: Received user feedback: {feedback}")
                 messages.extend([
                     {"role": "assistant", "content": json.dumps(response)},
                     {"role": "user", "content": f"Please refine the tickets based on this feedback: {feedback}"}
                 ])
+                print(f"[DEBUG] generate_tickets: Updated messages: {messages}")
             
             except Exception as e:
-                print(f"Error generating tickets: {str(e)}")
+                print(f"[DEBUG] generate_tickets: Exception encountered: {e}")
                 if not interactive:
                     raise
                 retry = input("Would you like to retry? (y/n): ").lower()
