@@ -219,16 +219,7 @@ Requirements:
         requirements: str,
         interactive: bool = True
     ) -> List[Dict]:
-        """
-        Generate tickets with optional interactive refinement.
-        
-        Args:
-            requirements: Project requirements text
-            interactive: Whether to enable interactive refinement mode
-        
-        Returns:
-            List of ticket dictionaries
-        """
+        """Generate tickets with optional interactive refinement."""
         messages = [
             {"role": "system", "content": self._create_system_prompt()},
             {"role": "user", "content": self._create_user_prompt(requirements)}
@@ -241,22 +232,31 @@ Requirements:
                 if len(messages) > self.MAX_MESSAGE_HISTORY:
                     # Keep system prompt and last N-1 messages
                     messages = [messages[0]] + messages[-(self.MAX_MESSAGE_HISTORY-1):]
-                
+
                 response = self._get_completion(messages)
-                tickets = response.get("tickets", [])
                 
+                # Extract content from OpenAI API response
+                if hasattr(response, 'choices') and response.choices:
+                    content = response.choices[0].message.content
+                    try:
+                        parsed_response = json.loads(content)
+                        tickets = parsed_response.get("tickets", [])
+                    except json.JSONDecodeError as e:
+                        logger.error(f"Failed to parse JSON response: {e}")
+                        # In interactive mode, we should raise the error to allow proper error handling
+                        raise
+                else:
+                    # Handle direct dictionary response (for tests/mocks)
+                    tickets = response.get("tickets", [])
+
                 if not interactive:
                     return tickets
-                
-                # First show the tickets before asking for feedback
+
+                # Show the tickets before asking for feedback
                 print("\nGenerated tickets:")
                 for i, ticket in enumerate(tickets, 1):
                     print(f"\nTicket {i}:")
-                    print(f"Title: {ticket['title']}")
-                    print(f"Description: {ticket['description'][:200]}...")
-                    print("Dependencies:", ", ".join(ticket['dependencies']))
-                    print("Risk Analysis:", ticket['risk_analysis'][:100], "...")
-                    print("Files to modify:", ", ".join(ticket['pr_details']['files']))
+                    print(json.dumps(ticket, indent=2))
                 
                 # Now ask for feedback
                 print("\nAre you satisfied with these tickets? (y/n)")
@@ -269,9 +269,14 @@ Requirements:
                 feedback = input().strip()
                 
                 # Add the actual AI response to the conversation
+                # Convert response to a serializable format if needed
+                response_content = (
+                    content if hasattr(response, 'choices') and response.choices 
+                    else json.dumps({"tickets": tickets})
+                )
                 messages.append({
                     "role": "assistant",
-                    "content": json.dumps(response, indent=2)  # Keep the full JSON response
+                    "content": response_content
                 })
                 
                 # Add the user's feedback
@@ -285,6 +290,9 @@ Requirements:
                 
                 logger.debug(f"generate_tickets: Added feedback, new messages: {messages}")
                 
+        except json.JSONDecodeError:
+            # Re-raise JSON decode errors
+            raise
         except Exception as e:
-            logger.error(f"generate_tickets: Exception encountered: {str(e)}")
+            logger.error(f"Error in generate_tickets: {e}")
             raise 

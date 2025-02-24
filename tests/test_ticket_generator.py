@@ -273,3 +273,92 @@ def test_interactive_feedback_message_limit(generator, monkeypatch):
     for i in range(1, len(message_counts)):
         # Each iteration should add at most 2 messages (assistant + user)
         assert message_counts[i] - message_counts[i-1] <= 2 
+
+def test_validate_ticket_structure_invalid_types(generator):
+    """Test validation of ticket structure with invalid field types."""
+    invalid_tickets = [
+        {
+            "tickets": [{
+                "title": 123,  # Should be string
+                "description": "Valid description",
+                "dependencies": "not_a_list",  # Should be list
+                "risk_analysis": ["not_a_string"],  # Should be string
+                "pr_details": {
+                    "files": "not_a_list",  # Should be list
+                    "changes": ["not_a_string"]  # Should be string
+                }
+            }]
+        }
+    ]
+    
+    with pytest.raises(ValueError, match="must be a string"):
+        generator._validate_ticket_structure(invalid_tickets[0])
+
+def test_validate_ticket_structure_missing_pr_fields(generator):
+    """Test validation of ticket structure with missing PR fields."""
+    invalid_tickets = {
+        "tickets": [{
+            "title": "Test Ticket",
+            "description": "Test description",
+            "dependencies": [],
+            "risk_analysis": "Test risks",
+            "pr_details": {}  # Missing required fields
+        }]
+    }
+    
+    with pytest.raises(ValueError, match="missing PR fields"):
+        generator._validate_ticket_structure(invalid_tickets)
+
+def test_create_system_prompt(generator):
+    """Test system prompt creation."""
+    prompt = generator._create_system_prompt()
+    assert "You are an expert project manager" in prompt
+    assert "JSON" in prompt
+    assert "tickets" in prompt
+
+def test_create_user_prompt(generator):
+    """Test user prompt creation."""
+    requirements = "Test requirements"
+    prompt = generator._create_user_prompt(requirements)
+    assert requirements in prompt
+    assert "Please analyze" in prompt
+
+def test_interactive_feedback_with_invalid_json(generator, monkeypatch, capsys):
+    """Test handling of invalid JSON during interactive feedback."""
+    def mock_get_completion_invalid_json(*args, **kwargs):
+        # Create a mock response that mimics the OpenAI API response structure
+        response = Mock()
+        message_mock = Mock()
+        message_mock.content = "Not a JSON response"
+        choice_mock = Mock()
+        choice_mock.message = message_mock
+        response.choices = [choice_mock]
+        return response
+    
+    monkeypatch.setattr(generator, '_get_completion', mock_get_completion_invalid_json)
+    
+    # Provide enough responses for the entire interaction
+    # First round: 'n' (not satisfied), 'Test feedback'
+    # Second round: 'y' (satisfied) to exit the loop
+    input_responses = iter(['n', 'Test feedback', 'y'])
+    monkeypatch.setattr('builtins.input', lambda *args: next(input_responses))
+    
+    # We expect a JSONDecodeError when trying to parse the invalid response
+    with pytest.raises(json.JSONDecodeError):
+        generator.generate_tickets("Test requirements", interactive=True)
+
+def test_max_retries_exceeded(generator, monkeypatch):
+    """Test behavior when max retries are exceeded."""
+    def mock_get_completion_always_fails(*args, **kwargs):
+        import httpx
+        error_request = httpx.Request("POST", "https://api.openai.com/v1/chat/completions")
+        raise APIError(
+            message="API Error",
+            request=error_request,
+            body={"error": "Test error"}
+        )
+    
+    monkeypatch.setattr(generator, '_get_completion', mock_get_completion_always_fails)
+    
+    with pytest.raises(APIError):
+        generator.generate_tickets("Test requirements", interactive=False) 

@@ -2,7 +2,8 @@ import pytest
 import sys
 from pathlib import Path
 import json
-from app import parse_input_content, parse_arguments, format_ticket_markdown
+from app import parse_input_content, parse_arguments, format_ticket_markdown, main
+from unittest.mock import patch
 
 def test_valid_plain_text():
     # Valid plain text with "feature" keyword and sufficient length
@@ -109,4 +110,66 @@ def test_parse_arguments_all_options(monkeypatch):
     assert args.api_key == 'test-key'
     assert args.non_interactive
     assert args.test
-    assert args.output_format == 'json' 
+    assert args.output_format == 'json'
+
+def test_invalid_file_type():
+    """Test handling of unsupported file types."""
+    with pytest.raises(ValueError, match=r"Unsupported file type"):
+        parse_input_content("test content", file_type='.xyz')
+
+def test_empty_input():
+    """Test handling of empty input."""
+    with pytest.raises(ValueError, match=r"Input is too short"):
+        parse_input_content("")
+
+def test_invalid_html():
+    """Test handling of malformed HTML."""
+    invalid_html = "<html><body>Incomplete tag"
+    with pytest.raises(ValueError):
+        parse_input_content(invalid_html, file_type='.html')
+
+def test_invalid_markdown():
+    """Test handling of malformed Markdown."""
+    invalid_md = "```python\nunclosed code block with a bug in it"
+    output = parse_input_content(invalid_md, file_type='.md')
+    assert len(output) > 0
+
+def test_parse_arguments_invalid_output_format():
+    """Test handling of invalid output format."""
+    with pytest.raises(SystemExit):
+        with patch('sys.argv', ['app.py', '--output-format', 'invalid']):
+            parse_arguments()
+
+def test_format_ticket_markdown_missing_fields():
+    """Test markdown formatting with missing optional fields."""
+    ticket = {
+        "title": "Test Ticket",
+        "description": "Test description",
+        "dependencies": [],
+        "risk_analysis": "Test risks",
+        "pr_details": {
+            "files": [],  # Empty files list
+            "changes": ""  # Empty changes
+        }
+    }
+    output = format_ticket_markdown(ticket)
+    assert "# Test Ticket" in output
+    assert "None" in output  # Should show "None" for empty lists
+
+def test_main_no_api_key(monkeypatch):
+    """Test main function without API key."""
+    monkeypatch.setenv('OPENAI_API_KEY', '')
+    monkeypatch.setattr('sys.argv', ['app.py', '--file', 'test.md'])
+    
+    with pytest.raises(SystemExit) as exc_info:
+        main()
+    assert exc_info.value.code == 1
+
+def test_main_file_not_found(monkeypatch):
+    """Test main function with non-existent file."""
+    monkeypatch.setenv('OPENAI_API_KEY', 'test_key')
+    monkeypatch.setattr('sys.argv', ['app.py', '--file', 'nonexistent.md'])
+    
+    with pytest.raises(SystemExit) as exc_info:
+        main()
+    assert exc_info.value.code == 1 

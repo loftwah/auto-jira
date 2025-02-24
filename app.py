@@ -104,6 +104,10 @@ def format_ticket_markdown(ticket: Dict) -> str:
 def parse_input_content(content: str, file_type: str = None) -> str:
     """Parse and preprocess input content based on file type with stricter validation."""
     try:
+        # Add file type validation first
+        if file_type and file_type not in ['.html', '.md', '.txt', '']:
+            raise ValueError("Unsupported file type")
+            
         if file_type == '.html':
             soup = BeautifulSoup(content, 'lxml')
             text = soup.body.get_text() if soup.body else soup.get_text()
