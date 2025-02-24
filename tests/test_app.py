@@ -26,7 +26,7 @@ def test_too_short_input():
 def test_missing_keyword_input():
     # Even if the input is long enough, missing 'feature' or 'bug' should raise an error
     valid_text = "This input is long enough but does not have any required keyword."
-    with pytest.raises(ValueError, match=r"Input does not contain expected keywords"):
+    with pytest.raises(ValueError, match=r"Input must contain either 'feature' or 'bug' keyword"):
         parse_input_content(valid_text, file_type=None)
 
 def test_html_input():
