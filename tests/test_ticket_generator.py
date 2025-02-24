@@ -33,7 +33,6 @@ def fake_get_completion_invalid(messages, max_retries=3):
     }
 
 def fake_get_completion_rate_limit(messages, max_retries=3):
-    from openai.types import APIError
     error_response = {
         "status_code": 429,
         "message": "Rate limit exceeded",
@@ -42,7 +41,6 @@ def fake_get_completion_rate_limit(messages, max_retries=3):
     raise RateLimitError(message="Rate limit exceeded", body=error_response, response=error_response)
 
 def fake_get_completion_api_error(messages, max_retries=3):
-    from openai.types import APIError
     error_response = {
         "status_code": 500,
         "message": "API error occurred",
