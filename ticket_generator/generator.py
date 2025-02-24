@@ -167,8 +167,13 @@ Requirements:
             {"role": "user", "content": self._create_user_prompt(requirements)}
         ]
         logger.debug(f"generate_tickets: Initial messages: {messages}")
-        
+
+        # For non-interactive mode, try a few times before giving up
+        non_interactive_max_attempts = 3
+        attempts = 0
+
         while True:
+            attempts += 1
             try:
                 response = self._get_completion(messages)
                 logger.debug(f"generate_tickets: API response received: {response}")
@@ -180,41 +185,36 @@ Requirements:
                     issues = self._validate_ticket(ticket)
                     logger.debug(f"generate_tickets: Validation for ticket {i}: {issues}")
                     if issues:
-                        all_issues.append(f"Ticket {i} issues:\n" + "\n".join(f"- {issue}" for issue in issues))
+                        all_issues.append(f"Ticket {i} issues:\n" +
+                                          "\n".join(f"- {issue}" for issue in issues))
                 
-                if all_issues and not interactive:
-                    raise ValueError("Generated tickets did not meet quality requirements:\n" + "\n".join(all_issues))
-                
-                if not interactive:
+                if all_issues:
+                    # For non-interactive mode, retry automatically up to max attempts
+                    if not interactive:
+                        if attempts < non_interactive_max_attempts:
+                            logger.warning("Attempt {}/{}: Generated tickets did not meet quality requirements:\n{}\nRetrying...".format(
+                                attempts, non_interactive_max_attempts, "\n".join(all_issues)))
+                            continue  # Retry ticket generation
+                        else:
+                            logger.warning("Maximum non-interactive attempts reached. Returning tickets with issues:\n{}".format("\n".join(all_issues)))
+                            return tickets
+                    else:
+                        # Interactive mode: display tickets, issues and ask for user feedback.
+                        print("\nGenerated Tickets:")
+                        for i, ticket in enumerate(tickets, 1):
+                            print(f"\nTicket {i}:")
+                            print(f"Title: {ticket.get('title', '')}")
+                            print(f"Description (first 200 chars): {ticket.get('description', '')[:200]}...")
+                        print("\nIssues detected:")
+                        print("\n".join(all_issues))
+                        feedback = input("\nAre you satisfied with these tickets? (y/n): ").lower()
+                        if feedback == 'y':
+                            return tickets
+                        else:
+                            continue  # Regenerate tickets in interactive mode
+                else:
+                    # All tickets passed validation
                     return tickets
-                
-                # In interactive mode, display tickets and get feedback
-                print("\nGenerated Tickets:")
-                for i, ticket in enumerate(tickets, 1):
-                    print(f"\nTicket {i}:")
-                    print(f"Title: {ticket['title']}")
-                    print(f"Description (first 200 chars): {ticket['description'][:200]}...")
-                
-                feedback = input("\nAre you satisfied with these tickets? (y/n): ").lower()
-                if feedback == 'y':
-                    return tickets
-                
-                # Get feedback for refinement
-                feedback = input("Please provide feedback for improvement: ")
-                logger.debug(f"generate_tickets: Received user feedback: {feedback}")
-                messages.extend([
-                    {"role": "assistant", "content": json.dumps(response)},
-                    {"role": "user", "content": f"Please refine the tickets based on this feedback: {feedback}"}
-                ])
-                logger.debug(f"generate_tickets: Updated messages: {messages}")
-            
             except Exception as e:
                 logger.error(f"generate_tickets: Exception encountered: {e}")
-                # Additional troubleshooting hint for API errors
-                if isinstance(e, APIError):
-                    logger.error("APIError encountered. Please verify your API key and network connection.")
-                if not interactive:
-                    raise
-                retry = input("Would you like to retry? (y/n): ").lower()
-                if retry != 'y':
-                    raise 
+                raise e 
