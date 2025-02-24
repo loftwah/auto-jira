@@ -179,9 +179,9 @@ Requirements:
                 for i, ticket in enumerate(tickets, 1):
                     print(f"\nTicket {i}:")
                     print(f"Title: {ticket['title']}")
-                    print(f"Description: {ticket['description'][:200]}...")  # Show first 200 chars
+                    print(f"Description: {ticket['description'][:200]}...")
                     print("Dependencies:", ", ".join(ticket['dependencies']))
-                    print("Risk Analysis:", ticket['risk_analysis'][:100], "...")  # Show first 100 chars
+                    print("Risk Analysis:", ticket['risk_analysis'][:100], "...")
                     print("Files to modify:", ", ".join(ticket['pr_details']['files']))
                 
                 # Now ask for feedback
@@ -194,13 +194,23 @@ Requirements:
                 print("\nPlease provide feedback for improvement:")
                 feedback = input().strip()
                 
-                # Add the feedback to messages for context
-                messages.extend([
-                    {"role": "assistant", "content": json.dumps(response)},
-                    {"role": "user", "content": f"Please refine these tickets based on the following feedback: {feedback}"}
-                ])
+                # Add the actual AI response to the conversation
+                messages.append({
+                    "role": "assistant",
+                    "content": json.dumps(response, indent=2)  # Keep the full JSON response
+                })
+                
+                # Add the user's feedback
+                messages.append({
+                    "role": "user",
+                    "content": (
+                        "Please refine the tickets based on this feedback, while maintaining "
+                        f"the same JSON structure: {feedback}"
+                    )
+                })
+                
                 logger.debug(f"generate_tickets: Added feedback, new messages: {messages}")
                 
         except Exception as e:
             logger.error(f"generate_tickets: Exception encountered: {str(e)}")
-            raise e 
+            raise 
