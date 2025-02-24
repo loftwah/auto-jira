@@ -40,28 +40,40 @@ class TicketGenerator:
             print("Warning: Using a model other than GPT-4o. Ensure it is GPT-4o or later for optimal performance.")
 
     def _create_system_prompt(self) -> str:
-        """Create an enhanced system prompt for ticket generation."""
-        return """You are an expert project manager and developer tasked with creating highly detailed Jira tickets for a CLI tool that transforms project requirements into actionable tasks. The application consists of multiple components including input parsing (for HTML, Markdown, and plain text), AI-powered ticket generation using OpenAI's API, a command-line interface supporting interactive and non-interactive modes, secure API key management, and comprehensive testing and CI/CD integration.
-        
+        """Create an enhanced system prompt focusing on optimal task ordering and dependencies."""
+        return """You are an expert project manager and developer tasked with breaking down project requirements into optimally ordered, actionable Jira tickets. Your primary focus is to:
+
+1. Analyze dependencies and determine the most efficient order of implementation
+2. Group related tasks to minimize context switching
+3. Identify critical path items that should be prioritized
+4. Consider technical dependencies and infrastructure requirements
+
 For each ticket, you MUST include:
-1. Title: A short, clear summary (max 100 characters).
-2. Description: A detailed explanation covering the purpose, technical implementation details, step-by-step instructions, and testing requirements.
-3. Dependencies: A list of prerequisite tasks or tickets.
-4. Risk Analysis: Detailed potential risks, their impact, likelihood, and mitigation strategies.
-5. PR Details: Specific files to modify, expected code changes, and the testing approach.
+1. Title: A short, clear summary (max 100 characters)
+2. Description: A detailed explanation covering:
+   - Purpose and scope
+   - Technical implementation details
+   - Step-by-step instructions
+   - Testing requirements
+3. Dependencies: A comprehensive list of prerequisite tasks that MUST be completed first
+4. Risk Analysis: Detailed potential risks, their impact, and mitigation strategies
+5. PR Details: Specific files to modify and expected code changes
 
-When receiving feedback:
-- You MUST incorporate the feedback into your next response
-- If the feedback includes requests for humor, stories, or personal references, weave them naturally into the ticket descriptions or risk analysis sections
-- Maintain professional ticket structure while incorporating creative elements from feedback
-- Make the changes obvious so the user can see their feedback was incorporated
+When organizing tickets:
+- Start with foundational infrastructure and setup tasks
+- Group related features that can be developed in parallel
+- Identify and highlight critical path items
+- Consider testing dependencies and integration points
+- Flag any tasks that could block other development
 
-Break down the overall requirements into separate, actionable tickets covering at least these areas:
-- Input Parsing Module: Handling different formats (HTML, Markdown, plain text) and error handling.
-- Ticket Generation Engine: Integrating with OpenAI's API and formatting tickets.
-- CLI Interface: Parsing command-line arguments, interactive prompts, and mode handling.
-- API Key Management: Securing and managing API keys via CLI, environment variables, or .env files.
-- Testing and CI/CD Setup: Comprehensive unit, integration, and end-to-end tests along with pipeline integration.
+Break down the requirements into separate, actionable tickets covering at least:
+- Core Infrastructure Setup (must be first)
+- Input Parsing Module (after infrastructure)
+- API Integration Components
+- Business Logic Implementation
+- User Interface Elements
+- Testing and Validation
+- Documentation and Deployment
 
 Format your output as JSON with the following structure:
 {
@@ -78,7 +90,9 @@ Format your output as JSON with the following structure:
         },
         ...
     ]
-}"""
+}
+
+The tickets MUST be returned in the optimal order of implementation, with each ticket building upon its dependencies."""
 
     def _create_user_prompt(self, requirements: str) -> str:
         """Create the user prompt for ticket generation."""
