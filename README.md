@@ -22,7 +22,12 @@ The AI-Powered Jira Ticket Generator is a CLI tool that leverages OpenAI to tran
 
 - Python 3.12 or later
 - [uv](https://github.com/astral-sh/uv) for virtual environment and dependency management
-- Python dependencies (see [requirements.txt](requirements.txt) for details)
+- Python dependencies:
+  - openai>=1.12.0,<2.0.0
+  - mistune>=3.0.0
+  - beautifulsoup4>=4.12.0
+  - lxml>=5.1.0
+  - python-dotenv>=1.0.0
 
 ### Setup Instructions
 
@@ -49,11 +54,17 @@ For a fast, one-shot ticket generation from a requirements file, run:
 uv run app.py --file requirements.md --non-interactive
 ```
 
+Additional options:
+- `--model <model-name>`: Specify the AI model (default: 'gpt-4o')
+- `--api-url <url>`: Set a custom API URL (default: 'https://api.openai.com/v1/')
+- `--api-key <key>`: Provide an API key
+- `--output-format <format>`: Choose output format ('markdown' or 'json')
+
 **What to Expect:**
 
 - **Input:** The tool reads your `requirements.md` file containing the project requirements.
-- **Processing:** The content is sent to the GPT-4 (or later) API, which processes and generates detailed ticket information.
-- **Output:** Tickets are output in Markdown format and include comprehensive details:
+- **Processing:** The content is sent to the GPT-4o (or later) API, which processes and generates detailed ticket information.
+- **Output:** Tickets are output in Markdown format (or JSON if specified) and include comprehensive details:
   - **Title** and **Description** of the ticket
   - **Dependencies** for further work
   - **Risk Assessments** and potential issues
