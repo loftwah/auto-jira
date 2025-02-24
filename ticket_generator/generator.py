@@ -121,7 +121,7 @@ Requirements:
         return issues
 
     def _get_completion(self, messages: List[Dict[str, str]], max_retries: int = 3) -> Dict:
-        """Get completion from OpenAI API with retry logic."""
+        """Get completion from OpenAI API with retry logic and improved error handling."""
         for attempt in range(max_retries):
             try:
                 logger.debug(f"_get_completion: Attempt {attempt+1}/{max_retries}")
@@ -152,6 +152,31 @@ Requirements:
                     time.sleep(wait_time)
                     continue
                 raise
+            except json.JSONDecodeError as e:
+                logger.error(f"_get_completion: Failed to decode JSON: {e}")
+                if attempt < max_retries - 1:
+                    wait_time = 2 ** attempt
+                    logger.warning(f"_get_completion: Retrying after {wait_time} seconds due to JSON decode error.")
+                    time.sleep(wait_time)
+                    continue
+                print("Received an invalid response from OpenAI API. Check your API and try again later.")
+                raise
+            except Exception as e:
+                # Import requests here to check if it's a network-related error
+                import requests
+                if isinstance(e, requests.exceptions.RequestException):
+                    logger.error(f"_get_completion: Network error encountered: {e}")
+                    if attempt < max_retries - 1:
+                        wait_time = 2 ** attempt
+                        logger.warning(f"_get_completion: Retrying after {wait_time} seconds due to network error. Check your internet, dumbass.")
+                        time.sleep(wait_time)
+                        continue
+                    print("Network's down, try again later.")
+                    raise
+                else:
+                    logger.error(f"_get_completion: Unexpected error encountered: {e}", exc_info=True)
+                    print("An unexpected error occurred. See logs for details.")
+                    raise
 
     def generate_tickets(
         self,

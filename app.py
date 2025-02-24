@@ -102,18 +102,33 @@ def format_ticket_markdown(ticket: Dict) -> str:
 """
 
 def parse_input_content(content: str, file_type: str = None) -> str:
-    """Parse input content based on file type."""
+    """Parse and preprocess input content based on file type with stricter validation."""
     try:
         if file_type == '.html':
             soup = BeautifulSoup(content, 'lxml')
-            # Extract text from body, or full document if no body
-            return soup.body.get_text() if soup.body else soup.get_text()
+            text = soup.body.get_text() if soup.body else soup.get_text()
         elif file_type == '.md':
             # Use mistune's default HTML renderer and then strip HTML tags
             html = mistune.html(content)
             soup = BeautifulSoup(html, 'lxml')
-            return soup.get_text()
-        return content  # Return as-is for plain text
+            text = soup.get_text()
+        else:
+            text = content  # Return as-is for plain text
+
+        # Preprocess the text: strip whitespace and normalize spaces/newlines
+        text = text.strip()
+        import re
+        text = re.sub(r'\s+', ' ', text)
+
+        # Validate minimum length - reject if less than 10 characters
+        if len(text) < 10:
+            raise ValueError("Input is too short (< 10 characters). Fix your input, dumbass.")
+
+        # Validate that the input contains at least one required keyword (feature or bug)
+        if "feature" not in text.lower() and "bug" not in text.lower():
+            raise ValueError("Input does not contain expected keywords ('feature' or 'bug'). Provide a real fucking requirement.")
+
+        return text
     except Exception as e:
         raise ValueError(f"Error parsing {file_type} content: {str(e)}")
 
