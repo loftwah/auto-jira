@@ -6,4 +6,5 @@ Add your `OPENAI_API_KEY` to the `.env` and you're good to go.
 
 - uv venv
 - source .venv/bin/activate
+- uv pip install -r requirements.txt
 - uv run app.py --file requirements.md --non-interactive
