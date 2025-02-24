@@ -90,7 +90,8 @@ Requirements:
 {requirements}"""
 
     def _validate_ticket(self, ticket: Dict) -> List[str]:
-        """Validate a ticket meets requirements."""
+        """Validate a ticket meets requirements, including title length,
+        description word count, and PR details structure."""
         validation = TicketValidation()
         issues = []
         
@@ -99,9 +100,26 @@ Requirements:
         if missing_fields:
             issues.append(f"Missing required fields: {', '.join(missing_fields)}")
         
-        # Check description length
-        if len(ticket.get('description', '')) < validation.min_description_length:
+        # Check title length (max 100 characters)
+        title = ticket.get('title', '')
+        if len(title) > 100:
+            issues.append("Title too long (maximum 100 characters)")
+        
+        # Check description length (minimum characters)
+        description = ticket.get('description', '')
+        if len(description) < validation.min_description_length:
             issues.append(f"Description too short (minimum {validation.min_description_length} characters)")
+        # Check description word count (minimum 200 words)
+        if len(description.split()) < 200:
+            issues.append("Description too short (minimum 200 words required)")
+        
+        # Validate PR details structure
+        pr_details = ticket.get('pr_details')
+        if not isinstance(pr_details, dict):
+            issues.append("PR details are missing or not in the expected format (should be a dict)")
+        else:
+            if 'files' not in pr_details or 'changes' not in pr_details:
+                issues.append("PR details missing required sub-fields: 'files' and 'changes'")
         
         return issues
 
@@ -192,6 +210,9 @@ Requirements:
             
             except Exception as e:
                 logger.error(f"generate_tickets: Exception encountered: {e}")
+                # Additional troubleshooting hint for API errors
+                if isinstance(e, APIError):
+                    logger.error("APIError encountered. Please verify your API key and network connection.")
                 if not interactive:
                     raise
                 retry = input("Would you like to retry? (y/n): ").lower()

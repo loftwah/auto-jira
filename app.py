@@ -64,6 +64,14 @@ def parse_arguments() -> argparse.Namespace:
         help='Send a simple test prompt to the OpenAI API to verify connectivity'
     )
 
+    # <-- New argument added for output format selection -->
+    parser.add_argument(
+        '--output-format',
+        choices=['markdown', 'json'],
+        default='markdown',
+        help='Output format (markdown or json)'
+    )
+
     return parser.parse_args()
 
 def format_ticket_markdown(ticket: Dict) -> str:
@@ -122,17 +130,17 @@ AI-Powered Jira Ticket Generator
 Purpose: Transform requirements into detailed Jira tickets using OpenAI.
 
 Usage:
-    python app.py [--file <file>] [--model <model>] [--api-url <url>] [--api-key <key>] [--non-interactive]
+    uv run app.py [--file <file>] [--model <model>] [--api-url <url>] [--api-key <key>] [--non-interactive]
 
 Examples:
     # Generate tickets from a Markdown file with default model (gpt-4o)
-    python app.py --file requirements.md
+    uv run app.py --file requirements.md
 
     # Use interactive mode with direct input
-    python app.py
+    uv run app.py
 
     # Non-interactive mode with specified model (GPT-4o or later only)
-    python app.py --file specs.html --model gpt-4o --non-interactive
+    uv run app.py --file specs.html --model gpt-4o --non-interactive
         """)
         sys.exit(0)
     
@@ -207,12 +215,14 @@ Examples:
             interactive=not args.non_interactive
         )
         
-        # Format output
-        output = "# Generated Jira Tickets\n\n"
-        for ticket in tickets:
-            output += format_ticket_markdown(ticket)
-        
-        print(output)
+        # Format output based on selected format
+        if args.output_format == 'json':
+            print(json.dumps(tickets, indent=2))
+        else:
+            output = "# Generated Jira Tickets\n\n"
+            for ticket in tickets:
+                output += format_ticket_markdown(ticket)
+            print(output)
         
     except Exception as e:
         print(f"Error: {str(e)}")
