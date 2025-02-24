@@ -45,6 +45,12 @@ For each ticket, you MUST include:
 4. Risk Analysis: Detailed potential risks, their impact, likelihood, and mitigation strategies.
 5. PR Details: Specific files to modify, expected code changes, and the testing approach.
 
+When receiving feedback:
+- You MUST incorporate the feedback into your next response
+- If the feedback includes requests for humor, stories, or personal references, weave them naturally into the ticket descriptions or risk analysis sections
+- Maintain professional ticket structure while incorporating creative elements from feedback
+- Make the changes obvious so the user can see their feedback was incorporated
+
 Break down the overall requirements into separate, actionable tickets covering at least these areas:
 - Input Parsing Module: Handling different formats (HTML, Markdown, plain text) and error handling.
 - Ticket Generation Engine: Integrating with OpenAI's API and formatting tickets.
@@ -168,8 +174,18 @@ Requirements:
                 if not interactive:
                     return tickets
                 
-                # In interactive mode, ask for feedback
-                print("\nGenerated tickets. Are you satisfied with this output? (y/n)")
+                # First show the tickets before asking for feedback
+                print("\nGenerated tickets:")
+                for i, ticket in enumerate(tickets, 1):
+                    print(f"\nTicket {i}:")
+                    print(f"Title: {ticket['title']}")
+                    print(f"Description: {ticket['description'][:200]}...")  # Show first 200 chars
+                    print("Dependencies:", ", ".join(ticket['dependencies']))
+                    print("Risk Analysis:", ticket['risk_analysis'][:100], "...")  # Show first 100 chars
+                    print("Files to modify:", ", ".join(ticket['pr_details']['files']))
+                
+                # Now ask for feedback
+                print("\nAre you satisfied with these tickets? (y/n)")
                 user_response = input().strip().lower()
                 
                 if user_response == 'y':
