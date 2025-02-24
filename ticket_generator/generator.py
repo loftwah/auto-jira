@@ -12,14 +12,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-@dataclass
-class TicketValidation:
-    """Validation rules for generated tickets."""
-    min_description_length: int = 200
-    required_fields: set = frozenset({
-        'title', 'description', 'dependencies', 'risk_analysis', 'pr_details'
-    })
-
 class TicketGenerator:
     """Handles the generation of Jira tickets using OpenAI's API."""
     
@@ -89,37 +81,6 @@ Format your output as JSON with the following structure:
 Requirements:
 {requirements}"""
 
-    def _validate_ticket(self, ticket: Dict) -> List[str]:
-        """Validate a ticket meets requirements, including title length,
-        description word count, and PR details structure."""
-        validation = TicketValidation()
-        issues = []
-        
-        # Check required fields
-        missing_fields = validation.required_fields - set(ticket.keys())
-        if missing_fields:
-            issues.append(f"Missing required fields: {', '.join(missing_fields)}")
-        
-        # Check title length (max 100 characters)
-        title = ticket.get('title', '')
-        if len(title) > 100:
-            issues.append("Title too long (maximum 100 characters)")
-        
-        # Check description length (minimum characters)
-        description = ticket.get('description', '')
-        if len(description) < validation.min_description_length:
-            issues.append(f"Description too short (minimum {validation.min_description_length} characters)")
-        
-        # Validate PR details structure
-        pr_details = ticket.get('pr_details')
-        if not isinstance(pr_details, dict):
-            issues.append("PR details are missing or not in the expected format (should be a dict)")
-        else:
-            if 'files' not in pr_details or 'changes' not in pr_details:
-                issues.append("PR details missing required sub-fields: 'files' and 'changes'")
-        
-        return issues
-
     def _get_completion(self, messages: List[Dict[str, str]], max_retries: int = 3) -> Dict:
         """Get completion from OpenAI API with retry logic and improved error handling."""
         for attempt in range(max_retries):
@@ -183,40 +144,16 @@ Requirements:
         requirements: str,
         interactive: bool = True
     ) -> List[Dict]:
-        """Generate tickets with enhanced validation and feedback."""
+        """Generate tickets without arbitrary validation."""
         messages = [
             {"role": "system", "content": self._create_system_prompt()},
             {"role": "user", "content": self._create_user_prompt(requirements)}
         ]
         logger.debug(f"generate_tickets: Initial messages: {messages}")
 
-        # For non-interactive mode, try a few times before giving up
-        non_interactive_max_attempts = getattr(self, 'non_interactive_max_attempts', 3)
-        attempts = 0
-
-        while True:
-            attempts += 1
-            try:
-                response = self._get_completion(messages)
-                tickets = response.get("tickets", [])
-                
-                # Validate all tickets
-                all_issues = []
-                for i, ticket in enumerate(tickets, 1):
-                    issues = self._validate_ticket(ticket)
-                    if issues:
-                        all_issues.append(f"Ticket {i} issues:\n" +
-                                        "\n".join(f"- {issue}" for issue in issues))
-                
-                if all_issues:
-                    error_msg = "Generated tickets did not meet quality requirements:\n" + "\n".join(all_issues)
-                    if not interactive or attempts >= non_interactive_max_attempts:
-                        raise ValueError(error_msg)
-                    logger.warning(f"Attempt {attempts}/{non_interactive_max_attempts}: {error_msg}\nRetrying...")
-                    continue
-                
-                return tickets
-
-            except Exception as e:
-                logger.error(f"generate_tickets: Exception encountered: {str(e)}")
-                raise e 
+        try:
+            response = self._get_completion(messages)
+            return response.get("tickets", [])
+        except Exception as e:
+            logger.error(f"generate_tickets: Exception encountered: {str(e)}")
+            raise e 

@@ -1,0 +1,9 @@
+Today, I built an automated ticket generator that uses GPT-4o to generate Jira tickets from a given requirements file. It uses Python, OpenAI API and takes in a requirements file, splits it into suitable PRs and generates a Jira ticket for each PR.
+
+https://github.com/loftwah/auto-jira
+
+Add your `OPENAI_API_KEY` to the `.env` and you're good to go.
+
+- uv venv
+- source .venv/bin/activate
+- uv run app.py --file requirements.md --non-interactive
