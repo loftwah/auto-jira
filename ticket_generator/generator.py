@@ -15,6 +15,11 @@ logger = logging.getLogger(__name__)
 class TicketGenerator:
     """Handles the generation of Jira tickets using OpenAI's API."""
     
+    # Add these constants at the class level
+    REQUIRED_TICKET_FIELDS = {"title", "description", "dependencies", "risk_analysis", "pr_details"}
+    REQUIRED_PR_FIELDS = {"files", "changes"}
+    MAX_MESSAGE_HISTORY = 10  # Optional: limit message history for very long conversations
+    
     def __init__(
         self,
         api_key: str,
@@ -87,6 +92,42 @@ Format your output as JSON with the following structure:
 Requirements:
 {requirements}"""
 
+    def _validate_ticket_structure(self, response: Dict) -> None:
+        """Validate the structure of the API response."""
+        if not isinstance(response, dict) or "tickets" not in response:
+            raise ValueError("Invalid response format: missing 'tickets' field")
+        
+        if not isinstance(response["tickets"], list):
+            raise ValueError("Invalid response format: 'tickets' must be a list")
+        
+        for ticket in response["tickets"]:
+            # Check required ticket fields
+            missing_fields = self.REQUIRED_TICKET_FIELDS - set(ticket.keys())
+            if missing_fields:
+                raise ValueError(f"Invalid ticket format: missing fields {missing_fields}")
+            
+            # Check PR details structure
+            if not isinstance(ticket["pr_details"], dict):
+                raise ValueError("Invalid ticket format: 'pr_details' must be a dictionary")
+            
+            missing_pr_fields = self.REQUIRED_PR_FIELDS - set(ticket["pr_details"].keys())
+            if missing_pr_fields:
+                raise ValueError(f"Invalid ticket format: missing PR fields {missing_pr_fields}")
+            
+            # Validate field types
+            if not isinstance(ticket["title"], str):
+                raise ValueError("Invalid ticket format: 'title' must be a string")
+            if not isinstance(ticket["description"], str):
+                raise ValueError("Invalid ticket format: 'description' must be a string")
+            if not isinstance(ticket["dependencies"], list):
+                raise ValueError("Invalid ticket format: 'dependencies' must be a list")
+            if not isinstance(ticket["risk_analysis"], str):
+                raise ValueError("Invalid ticket format: 'risk_analysis' must be a string")
+            if not isinstance(ticket["pr_details"]["files"], list):
+                raise ValueError("Invalid ticket format: 'pr_details.files' must be a list")
+            if not isinstance(ticket["pr_details"]["changes"], str):
+                raise ValueError("Invalid ticket format: 'pr_details.changes' must be a string")
+
     def _get_completion(self, messages: List[Dict[str, str]], max_retries: int = 3) -> Dict:
         """Get completion from OpenAI API with retry logic and improved error handling."""
         for attempt in range(max_retries):
@@ -102,13 +143,36 @@ Requirements:
                 logger.debug(f"_get_completion: Received raw response: {response}")
                 parsed_response = json.loads(response.choices[0].message.content)
                 logger.debug(f"_get_completion: Parsed response: {parsed_response}")
+                
+                # Validate the response structure
+                self._validate_ticket_structure(parsed_response)
+                
                 return parsed_response
+                
+            except json.JSONDecodeError as e:
+                logger.error(f"_get_completion: Failed to decode JSON: {e}")
+                if attempt < max_retries - 1:
+                    wait_time = 2 ** attempt
+                    logger.warning(f"_get_completion: Retrying after {wait_time} seconds due to JSON decode error.")
+                    time.sleep(wait_time)
+                    continue
+                print("Received an invalid response from OpenAI API. Check your API and try again later.")
+                raise
+            except ValueError as e:
+                # Handle validation errors
+                logger.error(f"_get_completion: Invalid response structure: {e}")
+                if attempt < max_retries - 1:
+                    wait_time = 2 ** attempt
+                    logger.warning(f"_get_completion: Retrying after {wait_time} seconds due to invalid response structure.")
+                    time.sleep(wait_time)
+                    continue
+                raise
             except RateLimitError as e:
                 logger.warning(f"_get_completion: RateLimitError encountered: {e}")
                 if attempt < max_retries - 1:
                     wait_time = 2 ** attempt
                     logger.warning(f"_get_completion: Retrying after {wait_time} seconds due to rate limit.")
-                    time.sleep(wait_time)  # Exponential backoff
+                    time.sleep(wait_time)
                     continue
                 raise
             except APIError as e:
@@ -118,15 +182,6 @@ Requirements:
                     logger.warning(f"_get_completion: Retrying after {wait_time} seconds due to server error.")
                     time.sleep(wait_time)
                     continue
-                raise
-            except json.JSONDecodeError as e:
-                logger.error(f"_get_completion: Failed to decode JSON: {e}")
-                if attempt < max_retries - 1:
-                    wait_time = 2 ** attempt
-                    logger.warning(f"_get_completion: Retrying after {wait_time} seconds due to JSON decode error.")
-                    time.sleep(wait_time)
-                    continue
-                print("Received an invalid response from OpenAI API. Check your API and try again later.")
                 raise
             except Exception as e:
                 # Import requests here to check if it's a network-related error
@@ -168,6 +223,11 @@ Requirements:
 
         try:
             while True:
+                # Trim message history if it exceeds MAX_MESSAGE_HISTORY
+                if len(messages) > self.MAX_MESSAGE_HISTORY:
+                    # Keep system prompt and last N-1 messages
+                    messages = [messages[0]] + messages[-(self.MAX_MESSAGE_HISTORY-1):]
+                
                 response = self._get_completion(messages)
                 tickets = response.get("tickets", [])
                 
