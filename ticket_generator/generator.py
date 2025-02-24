@@ -210,12 +210,24 @@ Requirements:
                         all_issues.append(f"Ticket {i} issues:\n" +
                                           "\n".join(f"- {issue}" for issue in issues))
                 
-                # Display the generated tickets first
+                # Display the generated tickets first - REMOVED TRUNCATION
                 print("\nGenerated Tickets:")
                 for i, ticket in enumerate(tickets, 1):
                     print(f"\nTicket {i}:")
+                    # Remove the truncation and show complete details
                     print(f"Title: {ticket.get('title', '')}")
-                    print(f"Description (first 200 chars): {ticket.get('description', '')[:200]}...")
+                    print(f"Description: {ticket.get('description', '')}")  # No more truncation
+                    print(f"\nDependencies:")
+                    for dep in ticket.get('dependencies', []):
+                        print(f"- {dep}")
+                    print(f"\nRisk Analysis:\n{ticket.get('risk_analysis', '')}")
+                    print("\nPR Details:")
+                    pr_details = ticket.get('pr_details', {})
+                    print("Files to Modify:")
+                    for file in pr_details.get('files', []):
+                        print(f"- {file}")
+                    print(f"\nExpected Changes:\n{pr_details.get('changes', '')}")
+                    print("\n" + "-" * 80)
 
                 if all_issues:
                     print("\nIssues detected:")
@@ -233,9 +245,7 @@ Requirements:
                 if feedback == 'y':
                     return tickets
                 else:
-                    # Get specific feedback from the user
                     user_feedback = input("\nPlease describe what you'd like to improve: ")
-                    # Add the feedback to messages for context in the next generation
                     messages.extend([
                         {"role": "assistant", "content": json.dumps(response)},
                         {"role": "user", "content": f"Please regenerate the tickets with these improvements: {user_feedback}"}
