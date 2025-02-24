@@ -1,11 +1,22 @@
 import pytest
-from app import parse_input_content
+import sys
+from pathlib import Path
+import json
+from app import parse_input_content, parse_arguments, format_ticket_markdown
 
 def test_valid_plain_text():
     # Valid plain text with "feature" keyword and sufficient length
     input_text = "This is a valid feature requirement with more than ten letters."
     output = parse_input_content(input_text, file_type=None)
     assert "feature" in output.lower()
+    assert len(output) >= 10
+
+def test_valid_bug_text():
+    # Valid plain text with "bug" keyword and sufficient length
+    input_text = "This is a critical bug that needs to be fixed immediately."
+    output = parse_input_content(input_text, file_type=None)
+    assert "bug" in output.lower()
+    assert len(output) >= 10
 
 def test_too_short_input():
     # Input shorter than 10 characters should raise a ValueError
@@ -19,7 +30,7 @@ def test_missing_keyword_input():
         parse_input_content(valid_text, file_type=None)
 
 def test_html_input():
-    # HTML input: extract text from HTML body; ensure keyword exists after conversion.
+    # HTML input: extract text from HTML body; ensure keyword exists after conversion
     html_content = "<html><body>This is an HTML test featuring the Feature keyword.</body></html>"
     output = parse_input_content(html_content, file_type='.html')
     assert "feature" in output.lower()
@@ -28,4 +39,74 @@ def test_markdown_input():
     # Markdown input: using mistune to parse Markdown; check that "bug" is present
     markdown_content = "# Header\nThis is a markdown file with a bug reported. Additional details to pass length."
     output = parse_input_content(markdown_content, file_type='.md')
-    assert "bug" in output.lower() 
+    assert "bug" in output.lower()
+
+def test_format_ticket_markdown():
+    # Test markdown formatting of a ticket
+    ticket = {
+        "title": "Test Ticket",
+        "description": "This is a test description",
+        "dependencies": ["Dep1", "Dep2"],
+        "risk_analysis": "Low risk",
+        "pr_details": {
+            "files": ["file1.py", "file2.py"],
+            "changes": "Update function calls"
+        }
+    }
+    output = format_ticket_markdown(ticket)
+    assert "# Test Ticket" in output
+    assert "## Description" in output
+    assert "- Dep1\n- Dep2" in output
+    assert "## Risk Analysis" in output
+    assert "- file1.py\n- file2.py" in output
+
+def test_format_ticket_markdown_no_dependencies():
+    # Test markdown formatting when dependencies list is empty
+    ticket = {
+        "title": "Test Ticket",
+        "description": "This is a test description",
+        "dependencies": [],
+        "risk_analysis": "Low risk",
+        "pr_details": {
+            "files": ["file1.py"],
+            "changes": "Update function"
+        }
+    }
+    output = format_ticket_markdown(ticket)
+    assert "None" in output  # Should show "None" for empty dependencies
+
+def test_parse_arguments_defaults(monkeypatch):
+    # Mock sys.argv
+    test_args = ['app.py', '--file', 'test.md']
+    monkeypatch.setattr(sys, 'argv', test_args)
+    
+    args = parse_arguments()
+    assert args.file == 'test.md'
+    assert args.model == 'gpt-4o'  # Check default value
+    assert args.api_url == 'https://api.openai.com/v1/'
+    assert not args.non_interactive
+    assert not args.test
+    assert args.output_format == 'markdown'
+
+def test_parse_arguments_all_options(monkeypatch):
+    # Mock sys.argv with all options
+    test_args = [
+        'app.py',
+        '--file', 'test.md',
+        '--model', 'custom-model',
+        '--api-url', 'http://custom-url',
+        '--api-key', 'test-key',
+        '--non-interactive',
+        '--test',
+        '--output-format', 'json'
+    ]
+    monkeypatch.setattr(sys, 'argv', test_args)
+    
+    args = parse_arguments()
+    assert args.file == 'test.md'
+    assert args.model == 'custom-model'
+    assert args.api_url == 'http://custom-url'
+    assert args.api_key == 'test-key'
+    assert args.non_interactive
+    assert args.test
+    assert args.output_format == 'json' 

@@ -191,67 +191,32 @@ Requirements:
         logger.debug(f"generate_tickets: Initial messages: {messages}")
 
         # For non-interactive mode, try a few times before giving up
-        non_interactive_max_attempts = 3
+        non_interactive_max_attempts = getattr(self, 'non_interactive_max_attempts', 3)
         attempts = 0
 
         while True:
             attempts += 1
             try:
                 response = self._get_completion(messages)
-                logger.debug(f"generate_tickets: API response received: {response}")
                 tickets = response.get("tickets", [])
                 
                 # Validate all tickets
                 all_issues = []
                 for i, ticket in enumerate(tickets, 1):
                     issues = self._validate_ticket(ticket)
-                    logger.debug(f"generate_tickets: Validation for ticket {i}: {issues}")
                     if issues:
                         all_issues.append(f"Ticket {i} issues:\n" +
-                                          "\n".join(f"- {issue}" for issue in issues))
+                                        "\n".join(f"- {issue}" for issue in issues))
                 
-                # Display the generated tickets first - REMOVED TRUNCATION
-                print("\nGenerated Tickets:")
-                for i, ticket in enumerate(tickets, 1):
-                    print(f"\nTicket {i}:")
-                    # Remove the truncation and show complete details
-                    print(f"Title: {ticket.get('title', '')}")
-                    print(f"Description: {ticket.get('description', '')}")  # No more truncation
-                    print(f"\nDependencies:")
-                    for dep in ticket.get('dependencies', []):
-                        print(f"- {dep}")
-                    print(f"\nRisk Analysis:\n{ticket.get('risk_analysis', '')}")
-                    print("\nPR Details:")
-                    pr_details = ticket.get('pr_details', {})
-                    print("Files to Modify:")
-                    for file in pr_details.get('files', []):
-                        print(f"- {file}")
-                    print(f"\nExpected Changes:\n{pr_details.get('changes', '')}")
-                    print("\n" + "-" * 80)
-
                 if all_issues:
-                    print("\nIssues detected:")
-                    print("\n".join(all_issues))
-                
-                if not interactive:
-                    if attempts < non_interactive_max_attempts and all_issues:
-                        logger.warning("Attempt {}/{}: Generated tickets did not meet quality requirements:\n{}\nRetrying...".format(
-                            attempts, non_interactive_max_attempts, "\n".join(all_issues)))
-                        continue
-                    return tickets
-                
-                # Interactive mode: ask for feedback
-                feedback = input("\nAre you satisfied with these tickets? (y/n): ").lower()
-                if feedback == 'y':
-                    return tickets
-                else:
-                    user_feedback = input("\nPlease describe what you'd like to improve: ")
-                    messages.extend([
-                        {"role": "assistant", "content": json.dumps(response)},
-                        {"role": "user", "content": f"Please regenerate the tickets with these improvements: {user_feedback}"}
-                    ])
+                    error_msg = "Generated tickets did not meet quality requirements:\n" + "\n".join(all_issues)
+                    if not interactive or attempts >= non_interactive_max_attempts:
+                        raise ValueError(error_msg)
+                    logger.warning(f"Attempt {attempts}/{non_interactive_max_attempts}: {error_msg}\nRetrying...")
                     continue
                 
+                return tickets
+
             except Exception as e:
-                logger.error(f"generate_tickets: Exception encountered: {e}")
+                logger.error(f"generate_tickets: Exception encountered: {str(e)}")
                 raise e 
