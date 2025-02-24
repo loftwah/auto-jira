@@ -57,6 +57,13 @@ def parse_arguments() -> argparse.Namespace:
         help='Run in non-interactive mode'
     )
 
+    # Added new argument for testing the OpenAI API
+    parser.add_argument(
+        '--test',
+        action='store_true',
+        help='Send a simple test prompt to the OpenAI API to verify connectivity'
+    )
+
     return parser.parse_args()
 
 def format_ticket_markdown(ticket: Dict) -> str:
@@ -134,6 +141,28 @@ Examples:
     if not api_key:
         print("Error: OpenAI API key not found. Please provide it via --api-key or OPENAI_API_KEY environment variable.")
         sys.exit(1)
+
+    # If --test flag is provided, send a simple test prompt to the OpenAI API
+    if args.test:
+        # Create the ticket generator that will be responsible for the API call.
+        generator = TicketGenerator(
+            api_key=api_key,
+            model=args.model,
+            api_base=args.api_url
+        )
+        # Define a simple set of messages to test the API connectivity:
+        test_messages = [
+            {"role": "system", "content": "You are a helpful assistant. Please respond in JSON format."},
+            {"role": "user", "content": "Hello, OpenAI. This is a test prompt. Please provide your response in JSON."}
+        ]
+        
+        try:
+            response = generator._get_completion(test_messages)
+            print("Test response from OpenAI API:")
+            print(json.dumps(response, indent=2))
+        except Exception as e:
+            print(f"Error during API test: {str(e)}")
+        sys.exit(0)
     
     # Get input content
     try:
