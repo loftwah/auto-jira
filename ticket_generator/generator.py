@@ -48,7 +48,7 @@ class TicketGenerator:
         
 For each ticket, you MUST include:
 1. Title: A short, clear summary (max 100 characters).
-2. Description: A detailed explanation (minimum 200 words) covering the purpose, technical implementation details, step-by-step instructions, and testing requirements.
+2. Description: A detailed explanation covering the purpose, technical implementation details, step-by-step instructions, and testing requirements.
 3. Dependencies: A list of prerequisite tasks or tickets.
 4. Risk Analysis: Detailed potential risks, their impact, likelihood, and mitigation strategies.
 5. PR Details: Specific files to modify, expected code changes, and the testing approach.
@@ -109,9 +109,6 @@ Requirements:
         description = ticket.get('description', '')
         if len(description) < validation.min_description_length:
             issues.append(f"Description too short (minimum {validation.min_description_length} characters)")
-        # Check description word count (minimum 200 words)
-        if len(description.split()) < 200:
-            issues.append("Description too short (minimum 200 words required)")
         
         # Validate PR details structure
         pr_details = ticket.get('pr_details')
