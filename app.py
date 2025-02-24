@@ -237,21 +237,8 @@ Examples:
             print("\n=== Generated Jira Tickets ===\n")
             for i, ticket in enumerate(tickets, 1):
                 print(f"Ticket {i}:")
-                print(f"Title: {ticket.get('title', '')}")
-                print("\nDescription:")
-                print(ticket.get('description', ''))
-                print("\nDependencies:")
-                for dep in ticket.get('dependencies', []):
-                    print(f"- {dep}")
-                print("\nRisk Analysis:")
-                print(ticket.get('risk_analysis', ''))
-                print("\nPR Details:")
-                print("Files to modify:")
-                for file in ticket.get('pr_details', {}).get('files', []):
-                    print(f"- {file}")
-                print("\nExpected Changes:")
-                print(ticket.get('pr_details', {}).get('changes', ''))
-                print("\n" + "="*50 + "\n")
+                print(format_ticket_markdown(ticket))
+                print("=" * 50 + "\n")
         
     except Exception as e:
         print(f"Error: {str(e)}")
